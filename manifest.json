@@ -18,6 +18,7 @@
       "src/background/storageService.js",
       "src/Shared/shared.js",
       "src/Shared/utils.js",
+      "src/libs/jquery-1.9.1.js",
       "src/background/background.js"
     ]
   },

@@ -1,4 +1,12 @@
+var payableURL;
 var authHeader, transferHeader;
+
+var PayableHeaderNames = [
+  "Username",
+  "Price",
+  "Bitcoin-Payment-Channel-Server",
+  "Bitcoin-Address"
+];
 
 /* function getAuthHeader() {
     var xhttp = new XMLHttpRequest();
@@ -7,7 +15,7 @@ var authHeader, transferHeader;
     authHeader = xhttp.responseText;
 }; */
 
-$(document).ready(function() {
+/* $(document).ready(function() {
     $.ajax({
         type:"GET",
         url: "http://10.8.235.166:8080/headers",
@@ -23,7 +31,7 @@ $(document).ready(function() {
             alert(err)
         }
     });
-});
+}); */
 
 var BG = {
   Methods: {},
@@ -79,6 +87,15 @@ BG.Methods.modifyHeaderIfExists = function(headers, newHeader) {
       break;
     }
   }
+};
+
+BG.Methods.getHeaderIfExists = function(headers, targetHeaderName) {
+  for (var i = headers.length - 1; i >= 0; i--) {
+    if (headers[i].name.toLowerCase() === targetHeaderName.toLowerCase()) {
+      return headers[i];
+    }
+  }
+  return null;
 };
 
 /**
@@ -139,7 +156,7 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
   }
 
   // add by default
-  if (authHeader && transferHeader) {
+  if (authHeader && transferHeader && url === payableURL) {
     console.log("Now pushing")
     isRuleApplied = true;
     originalHeaders.push({ name: 'Authorization', value: authHeader});
@@ -147,6 +164,29 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
   }
 
   return isRuleApplied ? originalHeaders : null;
+};
+
+/**
+ *
+ * @param originalHeaders Original Headers present in the HTTP(s) request
+ * @param headersTarget Request/Response (Where Modification is to be done)
+ * @param details (Actual details object)
+ * @returns originalHeaders with modifications if modified else returns {code}null{/code}
+ */
+BG.Methods.getPayableHeaders = function(originalHeaders, headersTarget, details) {
+
+  var payableHeaders = {};
+
+  for (var i = 0; i < PayableHeaderNames.length; i++) {
+    var header = BG.Methods.getHeaderIfExists(originalHeaders, PayableHeaderNames[i]);
+    if (header === null)
+      return null;
+
+    payableHeaders[PayableHeaderNames[i].toLowerCase()] = header.value;
+  }
+
+  console.log(payableHeaders);
+  return payableHeaders;
 };
 
 /**
@@ -289,6 +329,37 @@ BG.Methods.modifyResponseHeadersListener = function(details) {
   }
 };
 
+BG.Methods.payableResponseHeadersListener = function(details) {
+  var payableHeaders = BG.Methods.getPayableHeaders(details.responseHeaders, RQ.HEADERS_TARGET.RESPONSE, details);
+
+  if (payableHeaders !== null) {
+
+    payableURL = details.url;
+
+    var payload = {
+      "headers": payableHeaders,
+      "url": details.url
+    };
+
+    $.ajax({
+        type:"POST",
+        url: "http://10.8.235.166:8080/headers",
+        crossDomain: true,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(payload),
+        success: function(resp) {
+            console.log(resp);
+            authHeader = resp["Authorization"];
+            transferHeader = resp["Bitcoin-Transfer"];
+        },
+        failure: function(err) {
+            alert(err)
+        }
+    });
+  }
+};
+
 BG.Methods.registerListeners = function() {
   if (!chrome.webRequest.onBeforeRequest.hasListener(BG.Methods.modifyUrl)) {
     chrome.webRequest.onBeforeRequest.addListener(
@@ -307,6 +378,12 @@ BG.Methods.registerListeners = function() {
       BG.Methods.modifyResponseHeadersListener, { urls: ['<all_urls>'] }, ['blocking', 'responseHeaders']
     );
   }
+
+  if (!chrome.webRequest.onHeadersReceived.hasListener(BG.Methods.payableResponseHeadersListener)) {
+    chrome.webRequest.onHeadersReceived.addListener(
+      BG.Methods.payableResponseHeadersListener, { urls: ['<all_urls>'] }, ['blocking', 'responseHeaders']
+    );
+  }
 };
 
 // http://stackoverflow.com/questions/23001428/chrome-webrequest-onbeforerequest-removelistener-how-to-stop-a-chrome-web
@@ -315,6 +392,7 @@ BG.Methods.unregisterListeners = function() {
   chrome.webRequest.onBeforeRequest.removeListener(BG.Methods.modifyUrl);
   chrome.webRequest.onBeforeSendHeaders.removeListener(BG.Methods.modifyRequestHeadersListener);
   chrome.webRequest.onHeadersReceived.removeListener(BG.Methods.modifyResponseHeadersListener);
+  chrome.webRequest.onHeadersReceived.removeListener(BG.Methods.payableResponseHeadersListener);
 };
 
 BG.Methods.disableExtension = function() {

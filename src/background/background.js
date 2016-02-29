@@ -161,6 +161,9 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
     isRuleApplied = true;
     originalHeaders.push({ name: 'Authorization', value: authHeader});
     originalHeaders.push({ name: 'Bitcoin-Transfer', value: transferHeader});
+
+    authHeader = null;
+    transferHeader = null;
   }
 
   return isRuleApplied ? originalHeaders : null;

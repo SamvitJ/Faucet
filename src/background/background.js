@@ -8,6 +8,22 @@ var PayableHeaderNames = [
   "Bitcoin-Address"
 ];
 
+var enabled = true;
+chrome.browserAction.onClicked.addListener(setEnabled);
+
+function setEnabled() {
+  enabled = !enabled;
+  chrome.browserAction.setIcon({path: "resources/images/38x38" + (enabled ? ".png" : "_greyscale.png")});
+  if (enabled) {
+    chrome.webRequest.onHeadersReceived.addListener(
+      BG.Methods.payableResponseHeadersListener, { urls: ['<all_urls>'] }, ['blocking', 'responseHeaders']
+    );
+  }
+  else {
+    chrome.webRequest.onHeadersReceived.removeListener(BG.Methods.payableResponseHeadersListener);
+  }
+}
+
 /* function getAuthHeader() {
     var xhttp = new XMLHttpRequest();
     xhttp.open("GET", "http://10.8.235.166:8080/headers", false);
@@ -382,7 +398,7 @@ BG.Methods.registerListeners = function() {
     );
   }
 
-  if (!chrome.webRequest.onHeadersReceived.hasListener(BG.Methods.payableResponseHeadersListener)) {
+  if (enabled && !chrome.webRequest.onHeadersReceived.hasListener(BG.Methods.payableResponseHeadersListener)) {
     chrome.webRequest.onHeadersReceived.addListener(
       BG.Methods.payableResponseHeadersListener, { urls: ['<all_urls>'] }, ['blocking', 'responseHeaders']
     );
@@ -439,11 +455,11 @@ BG.Methods.readExtensionStatus = function() {
   });
 };
 
-chrome.browserAction.onClicked.addListener(function () {
+/* chrome.browserAction.onClicked.addListener(function () {
   chrome.tabs.create({'url': RQ.WEB_URL }, function(tab) {
     // Tab opened.
   });
-});
+}); */
 
 // Create contextMenu Action to Enable/Disable Requestly (Default Options)
 chrome.contextMenus.removeAll();

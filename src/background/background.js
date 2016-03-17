@@ -1,5 +1,6 @@
 var payableURL;
-var authHeader, transferHeader;
+var authHeader, transferHeader; // off-chain transaction headers
+var tokenHeader;                // micropayment channels headers
 
 var PayableHeaderNames = [
   "Username",
@@ -24,20 +25,14 @@ function setEnabled() {
   }
 }
 
-/* function getAuthHeader() {
-    var xhttp = new XMLHttpRequest();
-    xhttp.open("GET", "http://10.8.235.166:8080/headers", false);
-    xhttp.send();
-    authHeader = xhttp.responseText;
-}; */
-
-/* $(document).ready(function() {
+function requestOffChainHeaders(payload) {
     $.ajax({
-        type:"GET",
-        url: "http://10.8.235.166:8080/headers",
+        type:"POST",
+        url: "http://192.168.0.14:8080/headers", // "http://10.8.235.166:8080/headers",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
+        data: JSON.stringify(payload),
         success: function(resp) {
             console.log(resp);
             authHeader = resp["Authorization"];
@@ -47,7 +42,25 @@ function setEnabled() {
             alert(err)
         }
     });
-}); */
+};
+
+function requestChannelsHeaders(payload) {
+    $.ajax({
+        type:"POST",
+        url: "http://192.168.0.14:8080/headers-channels", // "http://10.8.235.166:8080/headers-channels",
+        crossDomain: true,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: JSON.stringify(payload),
+        success: function(resp) {
+            console.log(resp);
+            tokenHeader = resp['bitcoin-payment-channel-token'];
+        },
+        failure: function(err) {
+            alert(err)
+        }
+    });
+};
 
 var BG = {
   Methods: {},
@@ -180,6 +193,13 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
 
     authHeader = null;
     transferHeader = null;
+  }
+  if (tokenHeader && url === payableURL) {
+    console.log("Now pushing")
+    isRuleApplied = true;
+    originalHeaders.push({ name: 'Bitcoin-Payment-Channel-Token', value: tokenHeader});
+
+    tokenHeader = null;
   }
 
   return isRuleApplied ? originalHeaders : null;
@@ -360,22 +380,8 @@ BG.Methods.payableResponseHeadersListener = function(details) {
       "url": details.url
     };
 
-    $.ajax({
-        type:"POST",
-        url: "http://10.8.235.166:8080/headers",
-        crossDomain: true,
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        data: JSON.stringify(payload),
-        success: function(resp) {
-            console.log(resp);
-            authHeader = resp["Authorization"];
-            transferHeader = resp["Bitcoin-Transfer"];
-        },
-        failure: function(err) {
-            alert(err)
-        }
-    });
+    // requestOffChainHeaders(payload);
+    requestChannelsHeaders(payload);
   }
 };
 

@@ -1,6 +1,8 @@
 var payableURL;
+var instrHeaders = {};
+
 var authHeader, transferHeader; // off-chain transaction headers
-var tokenHeader;                // micropayment channels headers
+var tokenHeaders = [];          // micropayment channels headers
 
 var PayableHeaderNames = [
   "Username",
@@ -8,6 +10,9 @@ var PayableHeaderNames = [
   "Bitcoin-Payment-Channel-Server",
   "Bitcoin-Address"
 ];
+var OptionalHeaderNames = [
+  "Rate"
+]
 
 var enabled = true;
 chrome.browserAction.onClicked.addListener(setEnabled);
@@ -28,13 +33,13 @@ function setEnabled() {
 function requestOffChainHeaders(payload) {
     $.ajax({
         type:"POST",
-        url: "http://192.168.0.14:8080/headers", // "http://10.8.235.166:8080/headers",
+        url: "http://10.8.220.169:8080/headers", // "http://192.168.0.14:8080/headers",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         data: JSON.stringify(payload),
         success: function(resp) {
-            console.log(resp);
+            console.log("Proxy response: ", resp);
             authHeader = resp["Authorization"];
             transferHeader = resp["Bitcoin-Transfer"];
         },
@@ -47,14 +52,14 @@ function requestOffChainHeaders(payload) {
 function requestChannelsHeaders(payload) {
     $.ajax({
         type:"POST",
-        url: "http://192.168.0.14:8080/headers-channels", // "http://10.8.235.166:8080/headers-channels",
+        url: "http://10.8.220.169:8080/headers-channels", // "http://192.168.0.14:8080/headers-channels",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         data: JSON.stringify(payload),
         success: function(resp) {
-            console.log(resp);
-            tokenHeader = resp['bitcoin-payment-channel-token'];
+            console.log("Proxy response: ", resp);
+            tokenHeaders.push(resp['bitcoin-payment-channel-token']);
         },
         failure: function(err) {
             alert(err)
@@ -194,13 +199,32 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
     authHeader = null;
     transferHeader = null;
   }
-  if (tokenHeader && url === payableURL) {
+  if (tokenHeaders.length > 0 && payableURL.indexOf(url) > -1) {
     console.log("Now pushing")
     isRuleApplied = true;
-    originalHeaders.push({ name: 'Bitcoin-Payment-Channel-Token', value: tokenHeader});
 
-    tokenHeader = null;
+    console.log("Token headers: ", tokenHeaders);
+    originalHeaders.push({ name: 'Bitcoin-Payment-Channel-Token', value: tokenHeaders[0]});
+
+    tokenHeaders.splice(0, 1);
+    if (tokenHeaders.length == 0) {
+      requestChannelsHeaders({
+        "headers": instrHeaders,
+        "url": url
+      });
+    }
   }
+  else if (tokenHeaders.length == 0 && payableURL && payableURL.indexOf(url) > -1) {
+    console.log("Needed token headers, but didn't have them...");
+  }
+
+  /* No token headers and on payableURL */
+  /* if (tokenHeaders.length == 0 && payableURL && payableURL.indexOf(url) > -1) {
+    requestChannelsHeaders({
+      "headers": instrHeaders,
+      "url": url
+    });
+  } */
 
   return isRuleApplied ? originalHeaders : null;
 };
@@ -223,8 +247,14 @@ BG.Methods.getPayableHeaders = function(originalHeaders, headersTarget, details)
 
     payableHeaders[PayableHeaderNames[i].toLowerCase()] = header.value;
   }
+  for (var i = 0; i < OptionalHeaderNames.length; i++) {
+    var header = BG.Methods.getHeaderIfExists(originalHeaders, OptionalHeaderNames[i]);
+    if (header !== null) {
+      payableHeaders[OptionalHeaderNames[i].toLowerCase()] = header.value;
+    }
+  }
 
-  console.log(payableHeaders);
+  // console.log("Payable headers: ", payableHeaders);
   return payableHeaders;
 };
 
@@ -368,20 +398,33 @@ BG.Methods.modifyResponseHeadersListener = function(details) {
   }
 };
 
+/* Callback invoked when any HTTP response is received */
 BG.Methods.payableResponseHeadersListener = function(details) {
   var payableHeaders = BG.Methods.getPayableHeaders(details.responseHeaders, RQ.HEADERS_TARGET.RESPONSE, details);
 
   if (payableHeaders !== null) {
+    console.log("402 response received...", details.url);
 
     payableURL = details.url;
 
-    var payload = {
-      "headers": payableHeaders,
-      "url": details.url
-    };
+    /* If received (instr) headers contain time-rating scheme... */
+    if ("rate" in payableHeaders) {
 
-    // requestOffChainHeaders(payload);
-    requestChannelsHeaders(payload);
+      /* Request proxy for payment headers, if none stored */
+      if (tokenHeaders.length == 0) {
+        requestChannelsHeaders({
+          "headers": payableHeaders,
+          "url": details.url
+        });
+      }
+
+      /* Save instructional headers */
+      instrHeaders = {
+        "price": payableHeaders["rate"],
+        "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"]
+      };
+      console.log("Set time-rated headers: ", instrHeaders);
+    }
   }
 };
 

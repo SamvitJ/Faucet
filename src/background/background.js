@@ -2,7 +2,8 @@ var payableURL;
 var instrHeaders = {};
 
 var authHeader, transferHeader; // off-chain transaction headers
-var tokenHeaders = [];          // micropayment channels headers
+var offChainHeaders = [];       // off-chain transaction headers array
+// var tokenHeaders = [];          // micropayment channels headers
 
 var PayableHeaderNames = [
   "Username",
@@ -40,8 +41,13 @@ function requestOffChainHeaders(payload) {
         data: JSON.stringify(payload),
         success: function(resp) {
             console.log("Proxy response: ", resp);
-            authHeader = resp["Authorization"];
-            transferHeader = resp["Bitcoin-Transfer"];
+            /* authHeader = resp["Authorization"];
+            transferHeader = resp["Bitcoin-Transfer"]; */
+            offChainHeaders.push({
+              "Authorization": resp["Authorization"],
+              "Bitcoin-Transfer": resp["Bitcoin-Transfer"]
+            });
+            console.log("Headers array: ", JSON.stringify(offChainHeaders));
         },
         failure: function(err) {
             alert(err)
@@ -139,7 +145,7 @@ BG.Methods.getHeaderIfExists = function(headers, targetHeaderName) {
  * @param details (Actual details object)
  * @returns originalHeaders with modifications if modified else returns {code}null{/code}
  */
-BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
+BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details, isRequest) {
   var rule,
     headerPairs,
     isRuleApplied = false,
@@ -189,8 +195,16 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
     }
   }
 
-  // add by default
-  if (authHeader && transferHeader && url === payableURL) {
+  // return if not on payable URL or if in response handler
+  if (!payableURL || payableURL.indexOf(url) == -1
+      || !isRequest) {
+    return isRuleApplied ? originalHeaders : null;
+  }
+
+  // add payment headers to outgoing requests to payable URLs
+  console.log("Headers: ", JSON.stringify(originalHeaders));
+
+  if (authHeader && transferHeader) {
     console.log("Now pushing")
     isRuleApplied = true;
     originalHeaders.push({ name: 'Authorization', value: authHeader});
@@ -199,32 +213,31 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details) {
     authHeader = null;
     transferHeader = null;
   }
-  if (tokenHeaders.length > 0 && payableURL.indexOf(url) > -1) {
-    console.log("Now pushing")
+  if (offChainHeaders.length > 0) {
+    // console.log("Now pushing")
     isRuleApplied = true;
 
-    console.log("Token headers: ", tokenHeaders);
-    originalHeaders.push({ name: 'Bitcoin-Payment-Channel-Token', value: tokenHeaders[0]});
+    // console.log("Headers array: ", JSON.stringify(offChainHeaders));
+    console.log("Now pushing...", "[" + url + "]");
+    console.log("Authorization: " + offChainHeaders[0]['Authorization'],
+      "Bitcoin-Transfer: " + offChainHeaders[0]['Bitcoin-Transfer']);
+    originalHeaders.push({ name: 'Authorization', value: offChainHeaders[0]['Authorization']});
+    originalHeaders.push({ name: 'Bitcoin-Transfer', value: offChainHeaders[0]['Bitcoin-Transfer']});
 
-    tokenHeaders.splice(0, 1);
-    if (tokenHeaders.length == 0) {
-      requestChannelsHeaders({
+    offChainHeaders.splice(0, 1);
+    requestOffChainHeaders({
         "headers": instrHeaders,
         "url": url
       });
-    }
   }
-  else if (tokenHeaders.length == 0 && payableURL && payableURL.indexOf(url) > -1) {
-    console.log("Needed token headers, but didn't have them...");
-  }
-
-  /* No token headers and on payableURL */
-  /* if (tokenHeaders.length == 0 && payableURL && payableURL.indexOf(url) > -1) {
-    requestChannelsHeaders({
+  else if (offChainHeaders.length == 0) {
+    // console.log("Needed payment headers, but didn't have them...");
+    console.log("Requesting headers...", "[" + url + "]");
+    requestOffChainHeaders({
       "headers": instrHeaders,
       "url": url
     });
-  } */
+  }
 
   return isRuleApplied ? originalHeaders : null;
 };
@@ -383,7 +396,8 @@ BG.Methods.modifyUrl = function(details) {
 };
 
 BG.Methods.modifyRequestHeadersListener = function(details) {
-  var modifiedHeaders = BG.Methods.modifyHeaders(details.requestHeaders, RQ.HEADERS_TARGET.REQUEST, details);
+  var isRequest = true;
+  var modifiedHeaders = BG.Methods.modifyHeaders(details.requestHeaders, RQ.HEADERS_TARGET.REQUEST, details, isRequest);
 
   if (modifiedHeaders !== null) {
     return { requestHeaders: modifiedHeaders };
@@ -391,7 +405,8 @@ BG.Methods.modifyRequestHeadersListener = function(details) {
 };
 
 BG.Methods.modifyResponseHeadersListener = function(details) {
-  var modifiedHeaders = BG.Methods.modifyHeaders(details.responseHeaders, RQ.HEADERS_TARGET.RESPONSE, details);
+  var isRequest = false;
+  var modifiedHeaders = BG.Methods.modifyHeaders(details.responseHeaders, RQ.HEADERS_TARGET.RESPONSE, details, isRequest);
 
   if (modifiedHeaders !== null) {
     return { responseHeaders: modifiedHeaders };
@@ -403,7 +418,7 @@ BG.Methods.payableResponseHeadersListener = function(details) {
   var payableHeaders = BG.Methods.getPayableHeaders(details.responseHeaders, RQ.HEADERS_TARGET.RESPONSE, details);
 
   if (payableHeaders !== null) {
-    console.log("402 response received...", details.url);
+    console.log("402 response received...", "[" + details.url + "]");
 
     payableURL = details.url;
 
@@ -411,8 +426,8 @@ BG.Methods.payableResponseHeadersListener = function(details) {
     if ("rate" in payableHeaders) {
 
       /* Request proxy for payment headers, if none stored */
-      if (tokenHeaders.length == 0) {
-        requestChannelsHeaders({
+      if (offChainHeaders.length == 0) {
+        requestOffChainHeaders({
           "headers": payableHeaders,
           "url": details.url
         });
@@ -421,6 +436,8 @@ BG.Methods.payableResponseHeadersListener = function(details) {
       /* Save instructional headers */
       instrHeaders = {
         "price": payableHeaders["rate"],
+        "username": payableHeaders["username"],
+        "bitcoin-address": payableHeaders["bitcoin-address"],
         "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"]
       };
       console.log("Set time-rated headers: ", instrHeaders);

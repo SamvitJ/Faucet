@@ -146,11 +146,21 @@ BG.Methods.getHeaderIfExists = function(headers, targetHeaderName) {
   return null;
 };
 
+/* Returns base URL of given URL by omitting path after root domain */
 function getBaseURL(url) {
   pathArray = url.split('/');
   protocol = pathArray[0];
   host = pathArray[2];
   return (protocol + '//' + host);
+}
+
+/* Returns true if arr contains entry with name 'header', false otherwise */
+function containsHeader(arr, header) {
+  for (var i = 0, len = arr.length; i < len; i++) {
+    if (arr[i]["name"] === header)
+      return true;
+  }
+  return false;
 }
 
 /**
@@ -212,7 +222,7 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details, isR
 
   // return if not on payable URL or if in response handler
   if (!payableURLs || !(getBaseURL(url) in payableURLs)
-      || !isRequest) {
+      || !isRequest || containsHeader(originalHeaders, "Access-Control-Request-Method")) {
     return isRuleApplied ? originalHeaders : null;
   }
 

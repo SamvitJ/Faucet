@@ -42,7 +42,7 @@ chrome.runtime.onInstalled.addListener(function (details) {
 function requestOffChainHeaders(url, payload) {
     $.ajax({
         type:"POST",
-        url: "http://10.8.220.169:8080/headers", // "http://192.168.0.14:8080/headers",
+        url: "https://10.8.220.169:8080/headers",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -66,7 +66,7 @@ function requestOffChainHeaders(url, payload) {
 function requestChannelsHeaders(payload) {
     $.ajax({
         type:"POST",
-        url: "http://10.8.220.169:8080/headers-channels", // "http://192.168.0.14:8080/headers-channels",
+        url: "https://10.8.220.169:8080/headers-channels",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",

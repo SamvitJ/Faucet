@@ -29,6 +29,16 @@ function setEnabled() {
   }
 }
 
+// show popup on install
+chrome.runtime.onInstalled.addListener(function (details) {
+  if (details.reason == "install" || details.reason == "update") { // other: "chrome_update"
+    chrome.windows.create({
+      'url': 'src/background/install.html',
+      'type': 'normal'
+    });
+  }
+});
+
 function requestOffChainHeaders(url, payload) {
     $.ajax({
         type:"POST",

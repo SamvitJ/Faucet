@@ -6,11 +6,11 @@
  -->
 <html>
   <head>
-    <title>Micropayer</title>
+    <title>Micropayer Install</title>
     <style>
       body {
         font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
-        font-size: 100%;
+        font-size: 90%;
       }
       #proxyip {
         height: 17px;
@@ -26,7 +26,7 @@
         white-space: pre;
         /* text-overflow: ellipsis;
         overflow: hidden; */
-        font-size: 12px;
+        font-size: 13px;
         max-width: 500px;
       }
     </style>
@@ -39,8 +39,15 @@
      -->
   </head>
   <script type="text/javascript" src="/src/libs/jquery.min.js"></script>
-  <script type="text/javascript" src="/src/background/popup.js"></script>
+  <script type="text/javascript" src="/src/background/install.js"></script>
   <body>
+    <form id="form">
+      Enter Proxy IP address: <br>
+      <input type="text" id="proxyip" name="proxyip" value=""><br>
+      <input type="submit" id="submit" value="Submit">
+    </form>
+    <br>
+    <br>
     <div id="status"></div>
   </body>
 </html>

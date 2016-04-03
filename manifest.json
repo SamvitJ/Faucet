@@ -19,6 +19,7 @@
       "src/Shared/shared.js",
       "src/Shared/utils.js",
       "src/libs/jquery-1.9.1.js",
+      "src/background/proxy-requests.js",
       "src/background/popup.js",
       "src/background/background.js"
     ]

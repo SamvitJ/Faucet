@@ -1,8 +1,6 @@
 var payableURLs = {}; // map from payable URL to payment headers
 var instrHeaders = {}; // map from payable URL to instr headers
 
-var authHeader, transferHeader; // off-chain transaction headers
-
 var PayableHeaderNames = [
   "Username",
   "Price",
@@ -48,14 +46,12 @@ function requestOffChainHeaders(url, payload) {
         dataType: "json",
         data: JSON.stringify(payload),
         success: function(resp) {
-            console.log("Proxy response: ", resp);
-            /* authHeader = resp["Authorization"];
-            transferHeader = resp["Bitcoin-Transfer"]; */
+            // console.log("Proxy response: ", resp);
             payableURLs[url].push({
               "Authorization": resp["Authorization"],
               "Bitcoin-Transfer": resp["Bitcoin-Transfer"]
             });
-            console.log("Headers array: ", JSON.stringify(payableURLs[url]));
+            console.log("Got headers. Current array: ", JSON.stringify(payableURLs[url]));
         },
         failure: function(err) {
             alert(err)
@@ -227,36 +223,26 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details, isR
   }
 
   // add payment headers to outgoing requests to payable URLs
-  console.log("Headers: ", JSON.stringify(originalHeaders));
+  // console.log("Headers: ", JSON.stringify(originalHeaders));
 
   baseURL = getBaseURL(url);
   offChainHeaders = payableURLs[baseURL];
 
-  if (authHeader && transferHeader) {
-    console.log("Now pushing")
-    isRuleApplied = true;
-    originalHeaders.push({ name: 'Authorization', value: authHeader});
-    originalHeaders.push({ name: 'Bitcoin-Transfer', value: transferHeader});
-
-    authHeader = null;
-    transferHeader = null;
-  }
   if (offChainHeaders.length > 0) {
-    // console.log("Now pushing")
     isRuleApplied = true;
 
     // console.log("Headers array: ", JSON.stringify(offChainHeaders));
-    console.log("Now pushing...", "[" + url + "]");
-    console.log("Authorization: " + offChainHeaders[0]['Authorization'],
-      "Bitcoin-Transfer: " + offChainHeaders[0]['Bitcoin-Transfer']);
+    console.log("Now adding headers...", "[" + url + "]");
+    // console.log("Authorization: " + offChainHeaders[0]['Authorization'],
+    //   "Bitcoin-Transfer: " + offChainHeaders[0]['Bitcoin-Transfer']);
     originalHeaders.push({ name: 'Authorization', value: offChainHeaders[0]['Authorization']});
     originalHeaders.push({ name: 'Bitcoin-Transfer', value: offChainHeaders[0]['Bitcoin-Transfer']});
 
     offChainHeaders.splice(0, 1);
     requestOffChainHeaders(baseURL, {
-        "headers": instrHeaders[baseURL],
-        "url": url
-      });
+      "headers": instrHeaders[baseURL],
+      "url": url
+    });
   }
   else if (offChainHeaders.length == 0) {
     // console.log("Needed payment headers, but didn't have them...");
@@ -452,7 +438,7 @@ BG.Methods.payableResponseHeadersListener = function(details) {
 
     if (!(baseURL in payableURLs)) {
       payableURLs[baseURL] = [];
-      console.log("URLs: ", payableURLs);
+      // console.log("URLs: ", payableURLs);
     }
 
     /* If received (instr) headers contain time-rating scheme... */
@@ -473,7 +459,7 @@ BG.Methods.payableResponseHeadersListener = function(details) {
         "bitcoin-address": payableHeaders["bitcoin-address"],
         "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"]
       };
-      console.log("Set time-rated headers: ", instrHeaders[baseURL]);
+      // console.log("Set time-rated headers: ", instrHeaders[baseURL]);
     }
   }
 };

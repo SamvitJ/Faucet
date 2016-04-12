@@ -1,7 +1,7 @@
 var payableURLs = {}; // map from payable URL to payment headers
 var instrHeaders = {}; // map from payable URL to instr headers
 
-var cookieExpiration = null;
+var cookieData = {}; // map from payable URL to map of cookie data ("scheme_id": "expiration")
 
 var PayableHeaderNames = [
   "Username",
@@ -11,6 +11,7 @@ var PayableHeaderNames = [
 ];
 var OptionalHeaderNames = [
   "Rate",
+  "Scheme_id",
   // "Expiration"
 ]
 
@@ -52,7 +53,9 @@ function requestOffChainHeaders(url, payload) {
             // console.log("Proxy response: ", resp);
             payableURLs[url].push({
               "Authorization": resp["Authorization"],
-              "Bitcoin-Transfer": resp["Bitcoin-Transfer"]
+              "Bitcoin-Transfer": resp["Bitcoin-Transfer"],
+              "Expiration": ((url in cookieData) && (payload["headers"]["scheme_id"] in cookieData[url]) ?
+                cookieData[url][payload["headers"]["scheme_id"]] : null)
             });
             console.log("Got headers. Current array: ", JSON.stringify(payableURLs[url]));
         },
@@ -232,11 +235,11 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details, isR
   offChainHeaders = payableURLs[baseURL];
 
   // Drop expired payment headers
-  if ((url.indexOf("timerated") == -1) && cookieExpiration != null) {
+  if (url.indexOf("timerated") == -1) {
     while (offChainHeaders.length > 0) {
-      if (JSON.parse(offChainHeaders[0]['Bitcoin-Transfer'])['timestamp'] > cookieExpiration) {
+      if (offChainHeaders[0]['Expiration'] != null &&
+          (offChainHeaders[0]['Expiration'] < new Date().getTime())) {
         console.log("Headers expired!");
-        cookieExpiration = null;
         offChainHeaders.splice(0, 1);
         if (offChainHeaders.length == 0) {
           return isRuleApplied ? originalHeaders : null;
@@ -478,6 +481,7 @@ BG.Methods.payableResponseHeadersListener = function(details) {
         "username": payableHeaders["username"],
         "bitcoin-address": payableHeaders["bitcoin-address"],
         "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"],
+        "scheme_id": payableHeaders["scheme_id"]
         // "expiration": new Date().setTime(new Date().getTime() + (payableHeaders['expiration']*24*60*60*1000)) / 1000.0
       };
       // console.log("Set time-rated headers: ", instrHeaders[baseURL]);
@@ -491,11 +495,29 @@ BG.Methods.onCompletedListener = function(details) {
   if (baseURL in payableURLs) {
     chrome.tabs.query({currentWindow: true, active: true}, function(tabs) {
       chrome.cookies.get({"url": tabs[0].url, "name": "payments-cookie"}, function (cookie) {
+
         if (cookie) {
-          // console.log("Cookie: ", cookie);
-          cookieExpiration = cookie.expirationDate;
-          console.log("Cookie expiration: ", cookieExpiration);
+
+          if (!(baseURL in cookieData)) {
+            cookieData[baseURL] = {};
+          }
+          cookieData[baseURL][cookie.value] = cookie.expirationDate;
+          console.log("Cookie:", cookie.value, "expires:", cookie.expirationDate);
+
+          /* Set scheme ID on all headers with no scheme ID */
+          for (var i = 0; i < payableURLs[baseURL].length; i++) {
+            if (payableURLs[baseURL][i]["Expiration"] == null) {
+              payableURLs[baseURL][i]["Expiration"] = cookie.expirationDate;
+
+              console.log("Set expiration on previously received headers...");
+              console.log("Modified headers: ", JSON.stringify(payableURLs[baseURL]));
+            }
+          }
         }
+        else {
+          console.log("No cookie found");
+        }
+
       });
     });
   }

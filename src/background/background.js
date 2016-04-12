@@ -1,6 +1,8 @@
 var payableURLs = {}; // map from payable URL to payment headers
 var instrHeaders = {}; // map from payable URL to instr headers
 
+var cookieExpiration = null;
+
 var PayableHeaderNames = [
   "Username",
   "Price",
@@ -8,7 +10,8 @@ var PayableHeaderNames = [
   "Bitcoin-Address"
 ];
 var OptionalHeaderNames = [
-  "Rate"
+  "Rate",
+  // "Expiration"
 ]
 
 var enabled = true;
@@ -227,6 +230,23 @@ BG.Methods.modifyHeaders = function(originalHeaders, headersTarget, details, isR
 
   baseURL = getBaseURL(url);
   offChainHeaders = payableURLs[baseURL];
+
+  // Drop expired payment headers
+  if ((url.indexOf("timerated") == -1) && cookieExpiration != null) {
+    while (offChainHeaders.length > 0) {
+      if (JSON.parse(offChainHeaders[0]['Bitcoin-Transfer'])['timestamp'] > cookieExpiration) {
+        console.log("Headers expired!");
+        cookieExpiration = null;
+        offChainHeaders.splice(0, 1);
+        if (offChainHeaders.length == 0) {
+          return isRuleApplied ? originalHeaders : null;
+        }
+      }
+      else {
+        break;
+      }
+    }
+  }
 
   if (offChainHeaders.length > 0) {
     isRuleApplied = true;
@@ -457,12 +477,29 @@ BG.Methods.payableResponseHeadersListener = function(details) {
         "price": payableHeaders["rate"],
         "username": payableHeaders["username"],
         "bitcoin-address": payableHeaders["bitcoin-address"],
-        "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"]
+        "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"],
+        // "expiration": new Date().setTime(new Date().getTime() + (payableHeaders['expiration']*24*60*60*1000)) / 1000.0
       };
       // console.log("Set time-rated headers: ", instrHeaders[baseURL]);
     }
   }
 };
+
+BG.Methods.onCompletedListener = function(details) {
+  var baseURL = getBaseURL(details.url);
+
+  if (baseURL in payableURLs) {
+    chrome.tabs.query({currentWindow: true, active: true}, function(tabs) {
+      chrome.cookies.get({"url": tabs[0].url, "name": "payments-cookie"}, function (cookie) {
+        if (cookie) {
+          // console.log("Cookie: ", cookie);
+          cookieExpiration = cookie.expirationDate;
+          console.log("Cookie expiration: ", cookieExpiration);
+        }
+      });
+    });
+  }
+}
 
 BG.Methods.registerListeners = function() {
   if (!chrome.webRequest.onBeforeRequest.hasListener(BG.Methods.modifyUrl)) {
@@ -488,6 +525,12 @@ BG.Methods.registerListeners = function() {
       BG.Methods.payableResponseHeadersListener, { urls: ['<all_urls>'] }, ['blocking', 'responseHeaders']
     );
   }
+
+  if (enabled && !chrome.webRequest.onCompleted.hasListener(BG.Methods.onCompletedListener)) {
+    chrome.webRequest.onCompleted.addListener(
+      BG.Methods.onCompletedListener, { urls: ['<all_urls>'] }
+    );
+  }
 };
 
 // http://stackoverflow.com/questions/23001428/chrome-webrequest-onbeforerequest-removelistener-how-to-stop-a-chrome-web
@@ -497,6 +540,7 @@ BG.Methods.unregisterListeners = function() {
   chrome.webRequest.onBeforeSendHeaders.removeListener(BG.Methods.modifyRequestHeadersListener);
   chrome.webRequest.onHeadersReceived.removeListener(BG.Methods.modifyResponseHeadersListener);
   chrome.webRequest.onHeadersReceived.removeListener(BG.Methods.payableResponseHeadersListener);
+  chrome.webRequest.onCompleted.removeListener(BG.Methods.onCompletedListener);
 };
 
 BG.Methods.disableExtension = function() {

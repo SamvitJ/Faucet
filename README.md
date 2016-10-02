@@ -1,41 +1,26 @@
-Requestly [![Stories in Ready](https://badge.waffle.io/blunderboy/requestly.png?label=ready&title=Ready)](https://waffle.io/blunderboy/requestly)
-================
+Overview
+-----------------
 
-Requestly is a chrome extension using which user can redirect an HTTP(S) request.
-Requestly is available in [Chrome Store](https://chrome.google.com/webstore/detail/requestly/mdnleldcmiljblolnjhpnblkcekpdkpa).
+Faucet is a Chrome extension that allows a user to pay websites for access to pages or resources in Bitcoin.  
 
-Why do I need Requestly ?
--------------------------
+The project builds on the functionality provided by [Requestly](https://github.com/requestly/requestly-browser-extension), an extension that enables users to read and modify the headers of HTTP requests and responses in their browser.  
 
-Requestly is built with intention to help web developers debug JS issues on sites running in production environment.<br/>
-User just needs to create a redirect rule and redirect the JS running in production environment to JS from your local machine.<br/>
-Now, make changes on your local setup and test it on your site in production.
 
-**Other Perks:**
-Requestly can also be used to keep you away from time killing sites.<br/>
-Just create a rule to redirect yourself from facebook.com, twitter.com to stackoverflow.com and do some geeky stuff there.
+Setup
+-----------------
+- Run `git clone https://github.com/SamvitJ/Faucet`
+- Navigate to the files [background.js](https://github.com/SamvitJ/Faucet/blob/master/src/background/background.js#L17) and [proxy-requests.js](https://github.com/SamvitJ/Faucet/blob/master/src/background/proxy-requests.js#L1) and replace the default IP addresses with the IP address of your running [client payment module](https://github.com/SamvitJ/21BC-client) instance
+- Go to chrome://extensions/ in your Chrome browser
+- Select the "Developer Mode" checkbox on the top right of the page
+- Click on "Load unpacked extension" in the top left, and select the cloned source directory
 
-Steps to run the extension in Developer Mode:
----------------------------------------------
 
-<strong>Step1:</strong> Download the extension code on your machine <br/>
-(Using git): git clone https://github.com/blunderboy/requestly.git some_directory_name <br/>
-(Download ZIP): You can also download the extension in zip format from [Requestly Repsitory](https://github.com/blunderboy/requestly)
+Use
+-----------------
+- Visit any webpage that implements the [HTTP 402 Protocol](https://21.co/learn/21-lib-bitrequests/#the-21-bitrequests-library). You can try going to the [sample webpage](http://www.micropayments.tech) associated with this project, or set up your own [monetized webpage](https://github.com/SamvitJ/micropayments-webpage).
 
-<strong>Step2:</strong> Browse chrome://extensions/
 
-<strong>Step3:</strong> Select Checkbox for Developer Mode
+More information
+-----------------
+- See the [parent repository](https://github.com/SamvitJ/Bitcoin-micropayments) of this project.
 
-<strong>Step4:</strong> Click on Load unpacked extension
-
-<strong>Step5:</strong> Browse the directory in which extension code is present
-
-Author
-------------------------------
-
-Please feel free to drop an email to sachinjain024 [at] gmail [dot] com in case you find any issues.
-
-License
-----------------------
-
-MIT: http://sachinjain.mit-license.org

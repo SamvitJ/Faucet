@@ -12,7 +12,6 @@ var PayableHeaderNames = [
 var OptionalHeaderNames = [
   "Rate",
   "Scheme_id",
-  // "Expiration"
 ]
 
 var enabled = true;
@@ -482,7 +481,6 @@ BG.Methods.payableResponseHeadersListener = function(details) {
         "bitcoin-address": payableHeaders["bitcoin-address"],
         "bitcoin-payment-channel-server": payableHeaders["bitcoin-payment-channel-server"],
         "scheme_id": payableHeaders["scheme_id"]
-        // "expiration": new Date().setTime(new Date().getTime() + (payableHeaders['expiration']*24*60*60*1000)) / 1000.0
       };
       // console.log("Set time-rated headers: ", instrHeaders[baseURL]);
     }

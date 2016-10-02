@@ -1,7 +1,9 @@
+var paymentModuleIP = "http://10.8.125.119:8080"
+
 function requestStatus() {
     $.ajax({
         type:"GET",
-        url: "https://10.8.220.169:8080/status",
+        url: paymentModuleIP + "/status",
         crossDomain: true,
         success: function(resp) {
             bgPage.console.log("Status received...");

@@ -14,6 +14,8 @@ var OptionalHeaderNames = [
   "Scheme_id",
 ]
 
+var paymentModuleIP = "http://10.8.125.119:8080"
+
 var enabled = true;
 chrome.browserAction.onClicked.addListener(setEnabled);
 
@@ -43,7 +45,7 @@ chrome.runtime.onInstalled.addListener(function (details) {
 function requestOffChainHeaders(url, payload) {
     $.ajax({
         type:"POST",
-        url: "https://10.8.220.169:8080/headers",
+        url: paymentModuleIP + "/headers",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -67,7 +69,7 @@ function requestOffChainHeaders(url, payload) {
 function requestChannelsHeaders(payload) {
     $.ajax({
         type:"POST",
-        url: "https://10.8.220.169:8080/headers-channels",
+        url: paymentModuleIP + "/headers-channels",
         crossDomain: true,
         contentType: "application/json; charset=utf-8",
         dataType: "json",

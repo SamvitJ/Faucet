@@ -1,9 +1,9 @@
 {
-  "name": "Requestly",
+  "name": "Faucet",
 
   "version": "4.0.1",
   "manifest_version": 2,
-  "description": "Chrome Extension to modify HTTP requests (Redirect | Cancel | Replace | Modify Headers)",
+  "description": "Faucet allows you to pay sites for access to pages or resources in Bitcoin",
 
   "content_scripts": [
     {

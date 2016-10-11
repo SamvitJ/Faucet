@@ -3,7 +3,7 @@ Overview
 
 Faucet is a Chrome extension that allows a user to pay websites for access to pages or resources in Bitcoin.  
 
-The project builds on the functionality provided by [Requestly](https://github.com/requestly/requestly-browser-extension), an extension that enables users to read and modify the headers of HTTP requests and responses in their browser.  
+The project builds on the functionality provided by Chrome extension [Requestly](https://github.com/requestly/requestly-browser-extension), which allows a user to read and modify the headers of HTTP requests and responses in their browser.
 
 
 Setup
@@ -17,7 +17,7 @@ Setup
 
 Use
 -----------------
-- Visit any webpage that implements the [HTTP 402 Protocol](https://21.co/learn/21-lib-bitrequests/#the-21-bitrequests-library). You can try going to the [sample webpage](http://www.micropayments.tech) associated with this project, or set up your own [monetized webpage](https://github.com/SamvitJ/micropayments-webpage).
+- Visit any webpage that implements the [HTTP 402 Protocol](https://21.co/learn/21-lib-bitrequests/#the-21-bitrequests-library). You can try going to the [sample webpage](http://www.micropayments.tech) associated with this project (please give it a few moments to load), or set up your own [monetized webpage](https://github.com/SamvitJ/micropayments-webpage).
 
 
 More information
